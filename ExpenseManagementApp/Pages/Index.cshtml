@@ -1,0 +1,150 @@
+﻿@page
+@model IndexModel
+@{
+    ViewData["Title"] = "Expense Management";
+}
+
+@if (!string.IsNullOrEmpty(Model.ErrorMessage))
+{
+    <div class="alert alert-danger" role="alert">
+        <strong>Error:</strong> @Model.ErrorMessage
+    </div>
+}
+
+<div class="container-fluid mt-4">
+    <div class="row">
+        <div class="col-md-12">
+            <div class="card shadow-sm">
+                <div class="card-header bg-primary text-white">
+                    <h3 class="mb-0">Expenses</h3>
+                </div>
+                <div class="card-body">
+                    <!-- Action Buttons -->
+                    <div class="d-flex justify-content-between align-items-center mb-3">
+                        <div>
+                            <a asp-page="/AddExpense" class="btn btn-success">
+                                <i class="bi bi-plus-circle"></i> Add Expense
+                            </a>
+                            <a asp-page="/ApproveExpenses" class="btn btn-info">
+                                <i class="bi bi-check-circle"></i> Approve Expenses
+                            </a>
+                        </div>
+                        <div>
+                            <form method="get" class="d-flex">
+                                <input type="text" name="filter" class="form-control me-2" placeholder="Filter..." value="@Model.Filter" />
+                                <button type="submit" class="btn btn-secondary">Filter</button>
+                            </form>
+                        </div>
+                    </div>
+
+                    <!-- Expenses Table -->
+                    @if (Model.Expenses != null && Model.Expenses.Any())
+                    {
+                        <div class="table-responsive">
+                            <table class="table table-hover">
+                                <thead class="table-light">
+                                    <tr>
+                                        <th>Date</th>
+                                        <th>Category</th>
+                                        <th>Amount</th>
+                                        <th>Status</th>
+                                        <th>Actions</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    @foreach (var expense in Model.Expenses)
+                                    {
+                                        <tr>
+                                            <td>@expense.ExpenseDate.ToString("dd/MM/yyyy")</td>
+                                            <td>@expense.CategoryName</td>
+                                            <td>£@expense.AmountGBP.ToString("N2")</td>
+                                            <td>
+                                                <span class="badge @GetStatusBadgeClass(expense.StatusName)">
+                                                    @expense.StatusName
+                                                </span>
+                                            </td>
+                                            <td>
+                                                <div class="btn-group btn-group-sm" role="group">
+                                                    <a href="/ViewExpense?id=@expense.ExpenseId" class="btn btn-outline-primary">View</a>
+                                                    @if (expense.StatusName == "Draft")
+                                                    {
+                                                        <form method="post" asp-page-handler="Submit" class="d-inline">
+                                                            <input type="hidden" name="expenseId" value="@expense.ExpenseId" />
+                                                            <button type="submit" class="btn btn-outline-success">Submit</button>
+                                                        </form>
+                                                    }
+                                                </div>
+                                            </td>
+                                        </tr>
+                                    }
+                                </tbody>
+                            </table>
+                        </div>
+                    }
+                    else if (Model.UsingDummyData)
+                    {
+                        <div class="alert alert-warning">
+                            <strong>Database Connection Issue:</strong> Displaying dummy data because the database is unavailable.
+                        </div>
+                        <div class="table-responsive">
+                            <table class="table table-hover">
+                                <thead class="table-light">
+                                    <tr>
+                                        <th>Date</th>
+                                        <th>Category</th>
+                                        <th>Amount</th>
+                                        <th>Status</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <tr>
+                                        <td>01/12/2024</td>
+                                        <td>Travel</td>
+                                        <td>£120.00</td>
+                                        <td><span class="badge bg-warning">Submitted</span></td>
+                                    </tr>
+                                    <tr>
+                                        <td>15/11/2024</td>
+                                        <td>Meals</td>
+                                        <td>£45.50</td>
+                                        <td><span class="badge bg-success">Approved</span></td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    }
+                    else
+                    {
+                        <p class="text-muted">No expenses found.</p>
+                    }
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+@functions {
+    string GetStatusBadgeClass(string? status)
+    {
+        return status switch
+        {
+            "Draft" => "bg-secondary",
+            "Submitted" => "bg-warning",
+            "Approved" => "bg-success",
+            "Rejected" => "bg-danger",
+            _ => "bg-secondary"
+        };
+    }
+}
+
+<style>
+    .card {
+        border-radius: 8px;
+    }
+    .card-header {
+        border-radius: 8px 8px 0 0;
+    }
+    .table {
+        margin-bottom: 0;
+    }
+</style>

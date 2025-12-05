@@ -1,0 +1,249 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AI Chat Assistant - Expense Management</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <style>
+        body {
+            background-color: #f8f9fa;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+        .chat-container {
+            max-width: 800px;
+            margin: 50px auto;
+            background: white;
+            border-radius: 10px;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+            overflow: hidden;
+        }
+        .chat-header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 20px;
+            text-align: center;
+        }
+        .chat-messages {
+            height: 500px;
+            overflow-y: auto;
+            padding: 20px;
+            background: #f8f9fa;
+        }
+        .message {
+            margin-bottom: 15px;
+            display: flex;
+            animation: fadeIn 0.3s;
+        }
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        .message.user {
+            justify-content: flex-end;
+        }
+        .message-content {
+            max-width: 70%;
+            padding: 12px 16px;
+            border-radius: 18px;
+            word-wrap: break-word;
+        }
+        .message.user .message-content {
+            background: #667eea;
+            color: white;
+        }
+        .message.assistant .message-content {
+            background: white;
+            color: #333;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        .message.system .message-content {
+            background: #fff3cd;
+            color: #856404;
+            border: 1px solid #ffc107;
+        }
+        .chat-input-container {
+            padding: 20px;
+            background: white;
+            border-top: 1px solid #dee2e6;
+        }
+        .chat-input-container input {
+            border-radius: 25px;
+            padding: 12px 20px;
+        }
+        .chat-input-container button {
+            border-radius: 25px;
+            padding: 12px 30px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            border: none;
+        }
+        .chat-input-container button:hover {
+            opacity: 0.9;
+        }
+        .loading {
+            display: none;
+            text-align: center;
+            padding: 10px;
+        }
+        .loading.active {
+            display: block;
+        }
+    </style>
+</head>
+<body>
+    <div class="chat-container">
+        <div class="chat-header">
+            <h2>💬 AI Expense Assistant</h2>
+            <p class="mb-0">Ask me anything about your expenses!</p>
+        </div>
+        
+        <div class="chat-messages" id="chatMessages">
+            <div class="message assistant">
+                <div class="message-content">
+                    Hello! I'm your AI expense assistant. I can help you:
+                    <ul>
+                        <li>View and list expenses</li>
+                        <li>Create new expenses</li>
+                        <li>Check pending approvals</li>
+                        <li>Get expense summaries</li>
+                    </ul>
+                    Try asking: "Show me all expenses" or "Create a new travel expense for £50"
+                </div>
+            </div>
+        </div>
+        
+        <div class="loading" id="loading">
+            <div class="spinner-border text-primary" role="status">
+                <span class="visually-hidden">Loading...</span>
+            </div>
+        </div>
+        
+        <div class="chat-input-container">
+            <form id="chatForm" class="d-flex gap-2">
+                <input type="text" id="messageInput" class="form-control" placeholder="Type your message..." required autocomplete="off">
+                <button type="submit" class="btn btn-primary">Send</button>
+            </form>
+        </div>
+    </div>
+
+    <script>
+        const chatMessages = document.getElementById('chatMessages');
+        const chatForm = document.getElementById('chatForm');
+        const messageInput = document.getElementById('messageInput');
+        const loading = document.getElementById('loading');
+
+        // Check if GenAI is configured
+        let genaiConfigured = false;
+
+        // Initialize by checking if API endpoint exists
+        async function checkGenAIConfig() {
+            try {
+                const response = await fetch('/api/chat/status');
+                if (response.ok) {
+                    const data = await response.json();
+                    genaiConfigured = data.configured;
+                }
+            } catch (error) {
+                console.error('Error checking GenAI config:', error);
+            }
+        }
+
+        function escapeHtml(unsafe) {
+            return unsafe
+                .replace(/&/g, "&amp;")
+                .replace(/</g, "&lt;")
+                .replace(/>/g, "&gt;")
+                .replace(/"/g, "&quot;")
+                .replace(/'/g, "&#039;");
+        }
+
+        function formatMessage(text) {
+            let formatted = escapeHtml(text);
+            
+            // Bold text
+            formatted = formatted.replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>');
+            
+            // Line breaks
+            formatted = formatted.replace(/\n/g, '<br>');
+            
+            // Numbered lists
+            formatted = formatted.replace(/^(\d+)\.\s+(.+)$/gm, '<ol><li>$2</li></ol>');
+            
+            // Bullet lists
+            formatted = formatted.replace(/^[-*]\s+(.+)$/gm, '<ul><li>$1</li></ul>');
+            
+            // Clean up duplicate list tags
+            formatted = formatted.replace(/<\/ol>\s*<ol>/g, '');
+            formatted = formatted.replace(/<\/ul>\s*<ul>/g, '');
+            
+            return formatted;
+        }
+
+        function addMessage(text, sender) {
+            const messageDiv = document.createElement('div');
+            messageDiv.className = `message ${sender}`;
+            
+            const contentDiv = document.createElement('div');
+            contentDiv.className = 'message-content';
+            
+            if (sender === 'assistant' || sender === 'system') {
+                contentDiv.innerHTML = formatMessage(text);
+            } else {
+                contentDiv.textContent = text;
+            }
+            
+            messageDiv.appendChild(contentDiv);
+            chatMessages.appendChild(messageDiv);
+            chatMessages.scrollTop = chatMessages.scrollHeight;
+        }
+
+        async function sendMessage(message) {
+            addMessage(message, 'user');
+            messageInput.value = '';
+            loading.classList.add('active');
+
+            try {
+                if (!genaiConfigured) {
+                    // Use dummy responses if GenAI not configured
+                    setTimeout(() => {
+                        addMessage('GenAI services were not deployed. This is a dummy response.\n\nTo enable AI features, run deploy-with-chat.sh instead of deploy.sh.\n\nExample expenses:\n1. Travel: £120.00 (Submitted)\n2. Meals: £45.50 (Approved)', 'system');
+                        loading.classList.remove('active');
+                    }, 1000);
+                    return;
+                }
+
+                const response = await fetch('/api/chat', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({ message })
+                });
+
+                if (!response.ok) {
+                    throw new Error(`HTTP error! status: ${response.status}`);
+                }
+
+                const data = await response.json();
+                addMessage(data.response, 'assistant');
+            } catch (error) {
+                console.error('Error:', error);
+                addMessage('Sorry, I encountered an error. Please try again. Error: ' + error.message, 'system');
+            } finally {
+                loading.classList.remove('active');
+            }
+        }
+
+        chatForm.addEventListener('submit', (e) => {
+            e.preventDefault();
+            const message = messageInput.value.trim();
+            if (message) {
+                sendMessage(message);
+            }
+        });
+
+        // Check GenAI config on load
+        checkGenAIConfig();
+    </script>
+</body>
+</html>

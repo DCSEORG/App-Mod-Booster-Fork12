@@ -1,0 +1,57 @@
+@page
+@model AddExpenseModel
+@{
+    ViewData["Title"] = "Add Expense";
+}
+
+<div class="container mt-4">
+    <div class="row justify-content-center">
+        <div class="col-md-6">
+            <div class="card shadow-sm">
+                <div class="card-header bg-primary text-white">
+                    <h3 class="mb-0">Add Expense</h3>
+                </div>
+                <div class="card-body">
+                    @if (!string.IsNullOrEmpty(Model.ErrorMessage))
+                    {
+                        <div class="alert alert-danger" role="alert">
+                            @Model.ErrorMessage
+                        </div>
+                    }
+                    
+                    <form method="post">
+                        <div class="mb-3">
+                            <label for="Amount" class="form-label">Amount (£):</label>
+                            <input type="number" class="form-control" id="Amount" name="ExpenseRequest.AmountGBP" step="0.01" required />
+                        </div>
+                        
+                        <div class="mb-3">
+                            <label for="ExpenseDate" class="form-label">Date:</label>
+                            <input type="date" class="form-control" id="ExpenseDate" name="ExpenseRequest.ExpenseDate" required />
+                        </div>
+                        
+                        <div class="mb-3">
+                            <label for="CategoryId" class="form-label">Category:</label>
+                            <select class="form-select" id="CategoryId" name="ExpenseRequest.CategoryId" required>
+                                @foreach (var category in Model.Categories)
+                                {
+                                    <option value="@category.CategoryId">@category.CategoryName</option>
+                                }
+                            </select>
+                        </div>
+                        
+                        <div class="mb-3">
+                            <label for="Description" class="form-label">Description:</label>
+                            <textarea class="form-control" id="Description" name="ExpenseRequest.Description" rows="4"></textarea>
+                        </div>
+                        
+                        <div class="d-grid gap-2">
+                            <button type="submit" class="btn btn-primary">Submit</button>
+                            <a asp-page="/Index" class="btn btn-secondary">Cancel</a>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
